@@ -19,15 +19,6 @@ The simulation evolves over time — populations rise and fall as energy fluctua
 
 ---
 
-## 🖼️ Demo & Screenshots
-
-Suggested sections:
-1. Main Simulation Window — show the Pygame screen with bugs moving around.
-2. Statistics Graph — show the PyQtGraph live update window.
-3. (Optional) Close-up of Bug Attributes — if you add a debug overlay or text labels later.
-
----
-
 ## 🧩 Technologies Used
 
 - Python 3.x
@@ -105,3 +96,4 @@ This project is licensed under the MIT License — see the LICENSE file for deta
 
 Created by Nocivofrank
 If you like this project, give it a ⭐ on GitHub!
+
