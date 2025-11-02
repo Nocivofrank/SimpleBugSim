@@ -2,7 +2,7 @@ import pygame, random, threading
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtWidgets
 
-# --- Shared data ---
+#shared data
 
 data_time = []
 data_energy = []
@@ -32,7 +32,6 @@ immortal_curve = plot.plot(pen=pg.mkPen('r', width=2), name="Immortal")
 win.show()
 
 def update_plot():
-    """Refresh the graph every 100 ms."""
     with lock:
         if len(data_time) > 0:
             energy_curve.setData(data_time, data_energy)
