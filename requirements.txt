@@ -1,2 +1,3 @@
 PyQt6>=6.9.1
 pyqtgraph>=0.13.7
+pygame>=2.6.1
