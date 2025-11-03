@@ -45,7 +45,7 @@ def Simulation():
 
     Bug.create_bug_rand(bugs)
     Bug.debug_stuff(f"{len(bugs)} after adding one")
-    Bug.create_bug_amount(100000, bugs, universe_energy[0], True)
+    Bug.create_bug_amount(1000, bugs, universe_energy[0], True)
     Bug.debug_stuff(f"{len(bugs)} after adding 100000 bugs using create_bug_amount()")
 
     while running:
