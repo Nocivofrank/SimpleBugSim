@@ -43,9 +43,9 @@ class Graph():
             # assingns data to simple varaibels to make it easier to type
             t = self.data["time"]
             e = self.data["energy"]
-            b = self.data["bugcount"]
+            b = self.data["bugCount"]
             r = self.data["radius_avg"]
-            i = self.data["immortal"]
+            i = self.data["immortals"]
 
             if len(t) == 0:
                 return
