@@ -18,9 +18,6 @@ Graph = Graph()
 Graph.set_data_sources(lock, shared_data)
 
 def Simulation():
-    seed = 5
-    random.seed(seed)
-
     #initializing pygame
     pygame.init()
     screen = pygame.display.set_mode()
@@ -35,6 +32,9 @@ def Simulation():
     #font initialization
     ui_Font = pygame.font.SysFont("arial", 30)
     bug_stat_font = pygame.font.SysFont("arial", 10)
+
+    #this is where you will put all the code for the bug creation thing
+
 
     ###Dont FORGET to update the data for graph
 
