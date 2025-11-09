@@ -73,7 +73,7 @@ def run_sim():
 
     # Initialize pygame
     pygame.init()
-    screen = pygame.display.set_mode()
+    screen = pygame.display.set_mode((500,500))
     clock = pygame.time.Clock()
     running = True
     dt = 0
@@ -129,7 +129,7 @@ def run_sim():
         def update(self, dt, universe_energy, bugs):
             #applies universal decay to bug
             decay = 0
-            decay += self.initial_radius * (.01 * self.radius) * dt
+            decay += self.initial_radius * (.001 * self.radius) * dt
             if self.radius - decay < 0:
                 self.radius = 0
             else:
@@ -186,7 +186,7 @@ def run_sim():
             self.change_interval = maybe_mutate(self.change_interval, 0.3, 3.0)
             self.passive_eat = maybe_mutate(self.passive_eat, 0, .5)
             self.spontaneous_death_chance = maybe_mutate(self.spontaneous_death_chance, 0, 1)
-            self.reproduction_chance = maybe_mutate(self.reproduction_chance, 0, 1.0)
+            self.reproduction_chance = maybe_mutate(self.reproduction_chance, 0, .2)
 
         def reproduce(self):
             # this is where the bugs reproduce checks chances of reproduction and if universe has enough energy available
@@ -278,7 +278,7 @@ def run_sim():
         if universe_energy[0] > new_bug_energy_cost:
             if random.random() <= 0.01:
                 universe_energy[0] -= new_bug_energy_cost
-                bugs.append(bug(pygame.Vector2(random.randrange(0 , screen.get_width()) , random.randrange(0, screen.get_height())),speed=random.randrange(0,1000), attack=random.uniform(0,1.0), defense=random.uniform(0,1.0), mutation_chance=random.uniform(0,1.0), passive_eat=random.uniform(0,.5), spontaneous_death_chance=random.uniform(0.01,1.0), reproduction_chance=random.uniform(0,1.0)))
+                bugs.append(bug(pygame.Vector2(random.randrange(0 , screen.get_width()) , random.randrange(0, screen.get_height())),speed=random.randrange(0,1000), attack=random.uniform(0,1.0), defense=random.uniform(0,1.0), mutation_chance=random.uniform(0,1.0), passive_eat=random.uniform(0,.2), spontaneous_death_chance=random.uniform(0.01,1.0), reproduction_chance=random.uniform(0,1.0)))
 
         if universe_energy[0] > universe_energy_max:
             universe_energy[0] = universe_energy_max
@@ -326,7 +326,7 @@ def run_sim():
             
             bugs.extend(new_bugs)
 
-            text_surface = font.render(f"Energy: {universe_energy[0]:.2f}", True, (255,255,255))
+            text_surface = font.render(f"Resources: {universe_energy[0]:.2f}", True, (255,255,255))
             bug_amount = font.render(f"Bugs: {live_bugs}", True, (255,255,255))
             debug = font.render(f"Paused: {not update_bugs}", True, (255,255,255))
             screen.blit(debug, (100, 0))

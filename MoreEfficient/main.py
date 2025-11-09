@@ -21,7 +21,7 @@ Graph.set_data_sources(lock, shared_data)
 def Simulation():
     #initializing pygame
     pygame.init()
-    screen = pygame.display.set_mode((300, 300), pygame.RESIZABLE)
+    screen = pygame.display.set_mode((800, 800), pygame.RESIZABLE)
     clock = pygame.time.Clock()
     running = True
     delta_Time = 0
@@ -45,17 +45,23 @@ def Simulation():
 
     # Bug.create_bug_rand(bugs)
     Bug.debug_stuff(f"{len(bugs)} after adding one")
-    Bug.create_bug_amount(1000 , bugs, universe_energy[0], True)
+    Bug.create_bug_amount(100 , bugs, universe_energy[0], True)
     # Bug.debug_stuff(f"{len(bugs)} after adding 100000 bugs using create_bug_amount()")
+
+    scroll_wheel_value = 10
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.MOUSEWHEEL:
+                if event.y > 0:
+                    scroll_wheel_value += 10
+                elif event.y < 0:
+                    scroll_wheel_value -= 10
 
         mouse_x, mouse_y = pygame.mouse.get_pos()
-        Bug.mouse_stat_pos(mouse_x, mouse_y)
-        print(mouse_x, mouse_y)
+        Bug.mouse_stat_pos(mouse_x, mouse_y, scroll_wheel_value)
 
         screen.fill("black")
         if len(bugs) != 0:
