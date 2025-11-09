@@ -26,16 +26,19 @@ class Bug():
 
     grid = None
 
+    mouse_pos = pygame.Vector2(0 , 0)
+    scroll_wheel_range = 0
+
     bugs = []
 
     def __init__(self, pos, posGrid, color, speed, attack, defense, mutation_chance, passive_eat, death_chance, reproduction_chance):
         #Position and direction attributes
         self.pos = pygame.Vector2(pos)
         self.pos_grid = posGrid
-        print(f"pos grid {self.pos_grid}")
         self.vel = pygame.Vector2(0, 0)
         self.direction = pygame.Vector2(Bug.random_range(-1,1), Bug.random_range(-1,1)).normalize()
         self.image = self.make_surface(Bug.bug_energy_cost, color)
+        self.draw_stat = False
 
         #General Stats for bug
         self.color = color
@@ -99,24 +102,25 @@ class Bug():
         # Bug._update_pos_to_grid(self)
         Bug._detect_near(self,screen,dt)
     
-    def _draw(self, screen, font, draw_text = False):
+    def _draw(self, screen, font):
         pygame.draw.circle(screen, self.color, self.pos, self.radius)
         # pygame.draw.rect(screen, self.color, (self.pos.x, self.pos.y, self.radius, self.radius))
-        if font and draw_text:
+        if font:
             bug_amount = 0
             if self.attached_to != None:
                 bug_amount = len(self.attached_to)
 
-            self.bug_age = font.render(f"Age: {self.time_alive}", True, (255, 255, 255))
-            self.bug_stat_text = font.render(f"Atk: {self.attack:.2f} , Def: {self.defense:.2f}, Size: {self.radius:.2f}", True, (255,255,255))
-            self.bug_stat_text_1 = font.render(f"PasEat: {self.passive_eat:.2f} , Split: {self.times_split}, MutCha: {self.mutation_chance:.2f}", True, (255,255,255))
-            self.bug_grid_pos_text = font.render(f"Grid Pos: {self.pos_grid} , Bugs near: {bug_amount}", True, (255,255,255))
+            if self.draw_stat:
+                self.bug_age = font.render(f"Age: {self.time_alive}", True, (255, 255, 255))
+                self.bug_stat_text = font.render(f"Atk: {self.attack:.2f} , Def: {self.defense:.2f}, Size: {self.radius:.2f}", True, (255,255,255))
+                self.bug_stat_text_1 = font.render(f"PasEat: {self.passive_eat:.2f} , Split: {self.times_split}, MutCha: {self.mutation_chance:.2f}", True, (255,255,255))
+                # self.bug_grid_pos_text = font.render(f"Grid Pos: {self.pos_grid} , Bugs near: {bug_amount}", True, (255,255,255))
 
-            screen.blit(self.bug_age, (self.pos.x , self.pos.y + 10))
-            screen.blit(self.bug_grid_pos_text, (self.pos.x , self.pos.y - 20))
-            if not self.dead:
-                screen.blit(self.bug_stat_text, (self.pos.x , self.pos.y))
-                screen.blit(self.bug_stat_text_1, (self.pos.x , self.pos.y - 10))
+                screen.blit(self.bug_age, (self.pos.x , self.pos.y + 10))
+                # screen.blit(self.bug_grid_pos_text, (self.pos.x , self.pos.y - 20))
+                if not self.dead:
+                    screen.blit(self.bug_stat_text, (self.pos.x , self.pos.y))
+                    screen.blit(self.bug_stat_text_1, (self.pos.x , self.pos.y - 10))
 
     def _mutate(self):
         def maybe_mutate(value, min_val, max_val, intensity=0.2):
@@ -150,6 +154,10 @@ class Bug():
 
                     Bug.update_surface()
 
+    def _grow(self, amount):
+        self.radius += amount
+        self.update_surface()
+
     def _age(self):
         self.time_alive += 1
         if Bug.random_range(0, 1) <= self.death_chance:
@@ -161,19 +169,28 @@ class Bug():
     
     def _detect_near(self, screen, dt):
         if not self.dead:
-            amount_near = 0
+            # Check interactions with other bugs
             for other_bug in Bug.bugs:
-                if other_bug != self:
+                if other_bug is not self:
                     dist = other_bug.pos.distance_to(self.pos)
-                    #if other bug is nearby it attacks that bug
                     if dist <= self.radius * 2:
-                        amount_near += 1
-                        # self.do_attack(screen, other_bug)
-                        #checks to see if it can eat from just existing
-                    if self.radius <= self.max_radius:
-                        if Bug.universe_energy > self.passive_eat:
-                            self.radius += self.passive_eat * dt
-                            Bug.universe_energy -= self.passive_eat * dt
+                        self._attack(screen, other_bug)
+            # Check mouse proximity for stat display
+            dist_to_mouse = self.pos.distance_to(Bug.mouse_pos)
+            if dist_to_mouse < Bug.scroll_wheel_range:
+                self.draw_stat = True
+            else:
+                self.draw_stat = False
+
+    def _attack(self, screen, other_bug):
+        amount_remove = other_bug.defense - self.attack
+        if amount_remove > 0:
+            if other_bug.radius - amount_remove > 0:
+                other_bug.radius -= amount_remove
+                self.radius += amount_remove
+            else:
+                other_bug.radius = 0
+
 
     #helper functions
     def _create_bug(self):
@@ -210,35 +227,7 @@ class Bug():
 
     def debug_stuff(text):
         print("Debug: " + text)
-
-    # def _update_pos_to_grid(self):
-    #     # Initialize grid if missing
-    #     if Bug.grid is None:
-    #         Bug.grid = [[[] for _ in range(Bug.screenWidth)] for _ in range(Bug.screenHeight)]
-
-    #     # Clamp position within screen bounds
-    #     x = max(0, min(int(self.pos.x), Bug.screenWidth - 1))
-    #     y = max(0, min(int(self.pos.y), Bug.screenHeight - 1))
-
-    #     # Only move if bug actually changed cells
-    #     old_x, old_y = self.pos_grid
-    #     if (x, y) != (old_x, old_y):
-    #         # Remove from old cell (if valid)
-    #         if (
-    #             0 <= old_x < Bug.screenWidth and
-    #             0 <= old_y < Bug.screenHeight
-    #         ):
-    #             cell = Bug.grid[old_y][old_x]
-    #             # Remove safely without expensive `in` check
-    #             try:
-    #                 cell.remove(self)
-    #             except ValueError:
-    #                 pass  # wasn't there (fine)
-
-    #         # Add to new cell
-    #         Bug.grid[y][x].append(self)
-    #         self.pos_grid = (x, y)
-
+ 
     #Draw helper functions
     def make_surface(self, size, color):
         surf = pygame.Surface((size, size), pygame.SRCALPHA)
@@ -248,6 +237,6 @@ class Bug():
     def update_surface(self):
         self.image = self.make_surface(self.radius, self.color)
 
-    def grow(self, amount):
-        self.radius += amount
-        self.update_surface()
+    def mouse_stat_pos(x, y, s):
+        Bug.mouse_pos = pygame.Vector2(x , y)
+        Bug.scroll_wheel_range = s
