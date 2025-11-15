@@ -1,11 +1,12 @@
 import pygame, secrets
 import numpy as np
+import brain as Brain
 
 class Bug():
     bug_energy_cost = 10
 
     max_ranges = {
-        "speed": [0 , 4.0],
+        "speed": [0 , 10.0],
         "attack": [0 , 1.0],
         "defense": [0 , 1.0],
         "mutation": [0 , 1.0],
@@ -29,13 +30,13 @@ class Bug():
     scroll_wheel_range = 0
 
     #brian row and columns
-    input_size = 4
+    input_size = 12
     hidden_size = 10
     output_size = 4
 
     bugs = []
 
-    def __init__(self, pos, posGrid, color, speed, attack, defense, mutation_chance, accuracy, passive_eat, death_chance, reproduction_chance, canibal):
+    def __init__(self, pos, posGrid, color, speed, attack, defense, mutation_chance, accuracy, passive_eat, death_chance, reproduction_chance, canibal , brain):
         #Position and direction attributes
         self.pos = pygame.Vector2(pos)
         self.pos_grid = posGrid
@@ -44,19 +45,8 @@ class Bug():
         self.image = self.make_surface(Bug.bug_energy_cost, color)
         self.draw_stat = False
 
-        # weights and biases
-        # weights and biases
-        self.W1 = np.array([[Bug.random_range(-1, 1) for _ in range(Bug.input_size)]
-            for _ in range(Bug.hidden_size)])
-
-        self.b1 = np.array([Bug.random_range(-1, 1) for _ in range(Bug.hidden_size)])
-
-        self.W2 = np.array([[Bug.random_range(-1, 1) for _ in range(Bug.hidden_size)]
-            for _ in range(Bug.output_size)])
-
-        self.b2 = np.array([Bug.random_range(-1, 1) for _ in range(Bug.output_size)])
-
-        self.bug_information = np.array([0 , 0 , 0 , 0])
+        #Very very important contains Bug Brain
+        self.brain = Brain
 
         #General Stats for bug
         self.color = color
@@ -80,6 +70,7 @@ class Bug():
         self.radius = Bug.bug_energy_cost
         self.max_radius = Bug.max_ranges["size"][1]
         self.attached_to = None
+        self.attached_bug_dist = 0
 
         #Text initalizations
         self.bug_age = None
@@ -116,6 +107,14 @@ class Bug():
                 self.pos.y = screen.get_height() + self.radius
             elif self.pos.y > screen.get_height() + self.radius:
                 self.pos.y = -self.radius
+
+        self.bug_information[0] = self.radius
+        self.bug_information[1] = self.direction[0]
+        self.bug_information[2] = self.direction[1]
+        self.bug_information[3] = self.speed
+        self.bug_information[9] = self.attack
+        self.bug_information[10] = self.defense
+        self.bug_information[11] = self.accuracy
 
         bugs = Bug.bugs
         UE = Bug.universe_energy
@@ -192,25 +191,33 @@ class Bug():
             # Check interactions with other bugs
             for other_bug in Bug.bugs:
                 if other_bug is not self:
+                    dist = other_bug.pos.distance_to(self.pos)
                     if self.canibal:
                         #this checks to see if the bug is a canibal
-                        dist = other_bug.pos.distance_to(self.pos)
                         if dist <= self.radius * 2:
                             if Bug.random_range(0, 1) < self.accuracy:
                                 self._attack(screen, other_bug)
                     else:
                         #if bug is not canibal then it wont eat others with same color
                         if self.color != other_bug.color:
-                            dist = other_bug.pos.distance_to(self.pos)
                             if dist <= self.radius * 2:
                                 if Bug.random_range(0, 1) < self.accuracy:
                                     self._attack(screen, other_bug)
+                    if self.attached_bug_dist > dist:
+                        self.attached_to = other_bug
+                        self.attached_bug_dist = dist
+
             # Check mouse proximity for stat display
             dist_to_mouse = self.pos.distance_to(Bug.mouse_pos)
             if dist_to_mouse < Bug.scroll_wheel_range:
                 self.draw_stat = True
             else:
                 self.draw_stat = False
+            self.bug_information[4] = other_bug.pos[0]
+            self.bug_information[5] = other_bug.pos[1]
+            self.bug_information[6] = (other_bug.color[0] + other_bug.color[1] + other_bug.color[2]) / 3
+            self.bug_information[7] = other_bug.attack
+            self.bug_information[8] = other_bug.defense
 
     def _attack(self, screen, other_bug):
         amount_remove = other_bug.defense - self.attack
@@ -272,24 +279,3 @@ class Bug():
     def mouse_stat_pos(x, y, s):
         Bug.mouse_pos = pygame.Vector2(x , y)
         Bug.scroll_wheel_range = s
-
-    def sigmoid(x):
-        return 1 / (1 + np.exp(-x))
-    
-    def brainThink(self, x = np.array([0,0,0,0])):
-        # Shared hidden layer
-        z1 = np.dot(self.W1, x) + self.b1
-        hidden = Bug.sigmoid(z1)
-
-        # Output head 1
-        z2 = np.dot(self.W2, hidden) + self.b2
-        out = Bug.sigmoid(z2)
-        if out[0] > out[1]:
-            self.direction[0] = out[0]
-        else:
-            self.direction[0] = -out[1]
-
-        if out[2] > out[3]:
-            self.direction[1] = out[2]
-        else:
-            self.direction[1] = -out[3]

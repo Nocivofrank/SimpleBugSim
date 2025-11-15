@@ -21,7 +21,7 @@ Graph.set_data_sources(lock, shared_data)
 def Simulation():
     #initializing pygame
     pygame.init()
-    screen = pygame.display.set_mode((800, 800), pygame.RESIZABLE)
+    screen = pygame.display.set_mode((1080, 980), pygame.RESIZABLE)
     clock = pygame.time.Clock()
     running = True
     delta_Time = 0
@@ -71,7 +71,7 @@ def Simulation():
         mouse_x, mouse_y = pygame.mouse.get_pos()
         Bug.mouse_stat_pos(mouse_x, mouse_y, scroll_wheel_value)
         screen.fill("black")
-        amount = int(10000 / world_speed)
+        amount = int(100 / world_speed)
         if amount <= 0:
             amount = 1
         for i in range(amount):
