@@ -1,4 +1,5 @@
 import pygame, secrets
+import numpy as np
 
 class Bug():
     bug_energy_cost = 10
@@ -8,11 +9,13 @@ class Bug():
         "attack": [0 , 1.0],
         "defense": [0 , 1.0],
         "mutation": [0 , 1.0],
+        "accuracy": [0, 1.0],
         "passive eat": [0 , .5],
         "death": [0 , 1.0],
         "reproduction": [0 , 1.0],
         "size": [0 , 100],
-        "color": [0 , 255]
+        "color": [0 , 255],
+        "canibal": False
     }
 
     change_interval_range = [ 0 , 10 ]
@@ -22,23 +25,38 @@ class Bug():
     screenWidth = 0
     screenHeight = 0
 
-    bug_range = 1000
-
-    grid = None
-
     mouse_pos = pygame.Vector2(0 , 0)
     scroll_wheel_range = 0
 
+    #brian row and columns
+    input_size = 4
+    hidden_size = 10
+    output_size = 4
+
     bugs = []
 
-    def __init__(self, pos, posGrid, color, speed, attack, defense, mutation_chance, passive_eat, death_chance, reproduction_chance):
+    def __init__(self, pos, posGrid, color, speed, attack, defense, mutation_chance, accuracy, passive_eat, death_chance, reproduction_chance, canibal):
         #Position and direction attributes
         self.pos = pygame.Vector2(pos)
         self.pos_grid = posGrid
         self.vel = pygame.Vector2(0, 0)
-        self.direction = pygame.Vector2(Bug.random_range(-1,1), Bug.random_range(-1,1)).normalize()
+        self.direction = pygame.Vector2(0 , 0)
         self.image = self.make_surface(Bug.bug_energy_cost, color)
         self.draw_stat = False
+
+        # weights and biases
+        # weights and biases
+        self.W1 = np.array([[Bug.random_range(-1, 1) for _ in range(Bug.input_size)]
+            for _ in range(Bug.hidden_size)])
+
+        self.b1 = np.array([Bug.random_range(-1, 1) for _ in range(Bug.hidden_size)])
+
+        self.W2 = np.array([[Bug.random_range(-1, 1) for _ in range(Bug.hidden_size)]
+            for _ in range(Bug.output_size)])
+
+        self.b2 = np.array([Bug.random_range(-1, 1) for _ in range(Bug.output_size)])
+
+        self.bug_information = np.array([0 , 0 , 0 , 0])
 
         #General Stats for bug
         self.color = color
@@ -53,9 +71,11 @@ class Bug():
         self.attack = attack
         self.defense = defense
         self.mutation_chance = mutation_chance
+        self.accuracy = accuracy
         self.passive_eat = passive_eat
         self.death_chance = death_chance
         self.reproduction_chance = reproduction_chance
+        self.canibal = canibal
 
         self.radius = Bug.bug_energy_cost
         self.max_radius = Bug.max_ranges["size"][1]
@@ -76,7 +96,7 @@ class Bug():
             #Runs timer that moves bug at set intervals
             self.change_timer += dt
             if self.change_timer >= self.change_interval:
-                self.direction = pygame.Vector2(Bug.random_range(-1, 1), Bug.random_range(-1, 1)).normalize()
+                Bug.brainThink(self, self.bug_information)
                 self.change_timer = 0
                 self.change_interval = Bug.random_range(Bug.change_interval_range[0], Bug.change_interval_range[1])
 
@@ -101,6 +121,7 @@ class Bug():
         UE = Bug.universe_energy
         # Bug._update_pos_to_grid(self)
         Bug._detect_near(self,screen,dt)
+        Bug._reproduce(self)
     
     def _draw(self, screen, font):
         pygame.draw.circle(screen, self.color, self.pos, self.radius)
@@ -109,7 +130,6 @@ class Bug():
             bug_amount = 0
             if self.attached_to != None:
                 bug_amount = len(self.attached_to)
-
             if self.draw_stat:
                 self.bug_age = font.render(f"Age: {self.time_alive}", True, (255, 255, 255))
                 self.bug_stat_text = font.render(f"Atk: {self.attack:.2f} , Def: {self.defense:.2f}, Size: {self.radius:.2f}", True, (255,255,255))
@@ -144,15 +164,15 @@ class Bug():
         Bug.update_surface()
 
     def _reproduce(self):
-        if not self.dead:
+        if not self.dead and self.radius > Bug.bug_energy_cost * 2:
             if Bug.random_range(0 , 1.0) <= self.reproduction_chance:
                 if self.radius >= Bug.bug_energy_cost:
                     #creates a new bug
-                    Bug.create_bug()
-                    self.radius -= Bug.bug_energy_cost
+                    Bug._create_bug(self, (self.pos.x + Bug.random_range(-self.radius * 2, self.radius * 2), self.pos.y + Bug.random_range(-self.radius * 2 , self.radius * 2)) )
+                    self._grow(-Bug.bug_energy_cost)
                     self.times_split += 1
 
-                    Bug.update_surface()
+                    Bug.update_surface(self)
 
     def _grow(self, amount):
         self.radius += amount
@@ -172,9 +192,19 @@ class Bug():
             # Check interactions with other bugs
             for other_bug in Bug.bugs:
                 if other_bug is not self:
-                    dist = other_bug.pos.distance_to(self.pos)
-                    if dist <= self.radius * 2:
-                        self._attack(screen, other_bug)
+                    if self.canibal:
+                        #this checks to see if the bug is a canibal
+                        dist = other_bug.pos.distance_to(self.pos)
+                        if dist <= self.radius * 2:
+                            if Bug.random_range(0, 1) < self.accuracy:
+                                self._attack(screen, other_bug)
+                    else:
+                        #if bug is not canibal then it wont eat others with same color
+                        if self.color != other_bug.color:
+                            dist = other_bug.pos.distance_to(self.pos)
+                            if dist <= self.radius * 2:
+                                if Bug.random_range(0, 1) < self.accuracy:
+                                    self._attack(screen, other_bug)
             # Check mouse proximity for stat display
             dist_to_mouse = self.pos.distance_to(Bug.mouse_pos)
             if dist_to_mouse < Bug.scroll_wheel_range:
@@ -186,26 +216,28 @@ class Bug():
         amount_remove = other_bug.defense - self.attack
         if amount_remove > 0:
             if other_bug.radius - amount_remove > 0:
+                # pygame.draw.line(screen, (255,255,255,1), self.pos, other_bug.pos)
                 other_bug.radius -= amount_remove
-                self.radius += amount_remove
+                self._grow(amount_remove)
             else:
                 other_bug.radius = 0
-
+                other_bug.dead = True
 
     #helper functions
-    def _create_bug(self):
-        pos = (int(Bug.random_range(0, Bug.screenWidth)), int(Bug.random_range(0, Bug.screenHeight)))
-        Bug.bugs.append(Bug(pos, pos, self.color, self.speed, self.attack, self.defense, self.mutation_chance, self.passive_eat, self.death_chance, self.reproduction_chance))
+    def _create_bug(self, pos = None):
+        if pos == None:
+            pos = (int(Bug.random_range(0, Bug.screenWidth)), int(Bug.random_range(0, Bug.screenHeight)))
+        Bug.bugs.append(Bug(pos, pos, self.color, self.speed, self.attack, self.defense, self.mutation_chance, self.accuracy, self.passive_eat, self.death_chance, self.reproduction_chance, self.canibal))
 
     def create_bug_rand(bug_arr):
         pos = (int(Bug.random_range(0, Bug.screenWidth)), int(Bug.random_range(0, Bug.screenHeight)))
-        bug_arr.append(Bug(pos, pos, (Bug.random_stat_range("color"),Bug.random_stat_range("color"),Bug.random_stat_range("color")), Bug.random_stat_range("speed"), Bug.random_stat_range("attack"), Bug.random_stat_range("defense"), Bug.random_stat_range("mutation"), Bug.random_stat_range("passive eat"), Bug.random_stat_range("death"), Bug.random_stat_range("reproduction")))
+        bug_arr.append(Bug(pos, pos, (Bug.random_stat_range("color"),Bug.random_stat_range("color"),Bug.random_stat_range("color")), Bug.random_stat_range("speed"), Bug.random_stat_range("attack"), Bug.random_stat_range("defense"), Bug.random_stat_range("mutation"), Bug.random_stat_range("accuracy"), Bug.random_stat_range("passive eat"), Bug.random_stat_range("death"), Bug.random_stat_range("reproduction"), False))
         # Bug.debug_stuff("Created a bug!!")
 
     def create_bug_and_return():
         pos = pygame.Vector2(Bug.random_range(0, Bug.screenWidth), Bug.random_range(0, Bug.screenHeight))
         # Bug.debug_stuff("Returned a bug!!")
-        return(Bug(pos, pos , (Bug.random_stat_range("color"),Bug.random_stat_range("color"),Bug.random_stat_range("color")), Bug.random_stat_range("speed"), Bug.random_stat_range("attack"), Bug.random_stat_range("defense"), Bug.random_stat_range("mutation"), Bug.random_stat_range("passive eat"), Bug.random_stat_range("death"), Bug.random_stat_range("reproduction")))
+        return(Bug(pos, pos , (Bug.random_stat_range("color"),Bug.random_stat_range("color"),Bug.random_stat_range("color")), Bug.random_stat_range("speed"), Bug.random_stat_range("attack"), Bug.random_stat_range("defense"), Bug.random_stat_range("mutation"), Bug.random_stat_range("accuracy"), Bug.random_stat_range("passive eat"), Bug.random_stat_range("death"), Bug.random_stat_range("reproduction")))
         
     def random_range(a, b):
         return a + (b - a) * (secrets.randbits(52) / (1 << 52))
@@ -240,3 +272,24 @@ class Bug():
     def mouse_stat_pos(x, y, s):
         Bug.mouse_pos = pygame.Vector2(x , y)
         Bug.scroll_wheel_range = s
+
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+    
+    def brainThink(self, x = np.array([0,0,0,0])):
+        # Shared hidden layer
+        z1 = np.dot(self.W1, x) + self.b1
+        hidden = Bug.sigmoid(z1)
+
+        # Output head 1
+        z2 = np.dot(self.W2, hidden) + self.b2
+        out = Bug.sigmoid(z2)
+        if out[0] > out[1]:
+            self.direction[0] = out[0]
+        else:
+            self.direction[0] = -out[1]
+
+        if out[2] > out[3]:
+            self.direction[1] = out[2]
+        else:
+            self.direction[1] = -out[3]

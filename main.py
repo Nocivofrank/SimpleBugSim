@@ -79,7 +79,7 @@ def run_sim():
     dt = 0
 
     #giving universe set max amount of energy
-    universe_energy_max = 10000
+    universe_energy_max = 100000
     universe_energy = [universe_energy_max]
 
     #cost for creating a new bug

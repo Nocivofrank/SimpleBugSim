@@ -1,4 +1,4 @@
-import pygame, random, threading
+import pygame, threading
 from GraphFunctions import Graph
 from BugFunctions import Bug
 
@@ -25,6 +25,7 @@ def Simulation():
     clock = pygame.time.Clock()
     running = True
     delta_Time = 0
+    world_speed = 1000
 
     #setting universe Attributes
     universe_energy_max = 10000
@@ -48,7 +49,7 @@ def Simulation():
     Bug.create_bug_amount(100 , bugs, universe_energy[0], True)
     # Bug.debug_stuff(f"{len(bugs)} after adding 100000 bugs using create_bug_amount()")
 
-    scroll_wheel_value = 10
+    scroll_wheel_value = 100
 
     while running:
         for event in pygame.event.get():
@@ -59,21 +60,39 @@ def Simulation():
                     scroll_wheel_value += 10
                 elif event.y < 0:
                     scroll_wheel_value -= 10
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    world_speed *= 10
+                elif event.key == pygame.K_DOWN:
+                    world_speed /= 10
+                elif event.key == pygame.K_SPACE:
+                    world_speed = 1000
 
         mouse_x, mouse_y = pygame.mouse.get_pos()
         Bug.mouse_stat_pos(mouse_x, mouse_y, scroll_wheel_value)
-
         screen.fill("black")
-        if len(bugs) != 0:
-            for b in bugs:
-                b._update(delta_Time, screen, universe_energy[0], bugs)
-                b._draw(screen, bug_stat_font)
+        amount = int(10000 / world_speed)
+        if amount <= 0:
+            amount = 1
+        for i in range(amount):
+            if len(bugs) != 0:
+                for b in bugs:
+                    if not b.dead:
+                        b._update(delta_Time, screen, universe_energy[0], bugs)
+                    if b.dead:
+                        bugs.remove(b)
+        for i in range(amount):
+            if len(bugs) != 0:
+                for b in bugs:
+                    if not b.dead:
+                        b._draw(screen, bug_stat_font)
+                
 
         # Flip display
         pygame.display.flip()
 
         # Cap FPS and get delta time
-        delta_Time = clock.tick(120) / 100
+        delta_Time = clock.tick(60) / world_speed
 
     pygame.quit()
 
