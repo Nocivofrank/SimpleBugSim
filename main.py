@@ -1,4 +1,4 @@
-import pygame, random, threading
+import pygame, random, threading, secrets
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtWidgets
 
@@ -89,14 +89,17 @@ def run_sim():
     font = pygame.font.SysFont("arial", 36)
     bug_font = pygame.font.SysFont("arial", 10)
 
+    def random_range(a, b):
+        return a + (b - a) * (secrets.randbits(52) / (1 << 52))
+
     class bug:
         def __init__(self, pos, speed, attack, defense, mutation_chance, passive_eat, spontaneous_death_chance, reproduction_chance):
             self.bug_pos = pos
             self.velocity = pygame.Vector2(0,0)
-            self.direction = pygame.Vector2(random.uniform(-1, 1), random.uniform(-1, 1)).normalize()
+            self.direction = pygame.Vector2(random_range(-1, 1), random_range(-1, 1)).normalize()
             self.move = pygame.Vector2(0,0)
-            self.change_interval = random.uniform(0.5, 2.0)
-            self.change_timer = random.uniform(0, self.change_interval)
+            self.change_interval = random_range(.5, 2.0)
+            self.change_timer = random_range(0 , self.change_interval)
 
             self.color = "red"
             self.time_alive = 0
@@ -139,9 +142,9 @@ def run_sim():
             #Runs timer that moves bug at set intervals
             self.change_timer += dt
             if self.change_timer >= self.change_interval:
-                self.direction = pygame.Vector2(random.uniform(-1, 1), random.uniform(-1, 1)).normalize()
+                self.direction = pygame.Vector2(random_range(-1, 1), random_range(-1, 1)).normalize()
                 self.change_timer = 0
-                self.change_interval = random.uniform(0.5, 2.0)
+                self.change_interval = random_range(.5, 2.0)
 
             if not self.dead:
                 #gives bugs movement
@@ -162,7 +165,8 @@ def run_sim():
                 self.bug_pos.y = -self.radius
             
             #calls the self reproduce function that way it may reproduce more complicated in function
-            self.reproduce()
+            if len(bugs) < 500:
+                self.reproduce()
             # a bunch of gibrish but for text updating
             self.bug_age = bug_font.render(f"Age: {self.time_alive}", True, (255, 255, 255))
             self.bug_stat_text = bug_font.render(f"Atk: {self.attack:.2f} , Def: {self.defense:.2f}, Size: {self.radius:.2f}", True, (255,255,255))
@@ -172,7 +176,7 @@ def run_sim():
             # small helper function
             def maybe_mutate(value, min_val, max_val, intensity=0.2):
                 # basically (if mutation chance is 10% then it has a 10% of hitting)
-                if random.random() <= self.chance_for_mutation:
+                if random_range(0, 1) <= self.chance_for_mutation:
                     # bias toward small changes instead of total random resets
                     delta = random.uniform(-intensity, intensity)
                     new_value = value + delta
@@ -190,11 +194,12 @@ def run_sim():
 
         def reproduce(self):
             # this is where the bugs reproduce checks chances of reproduction and if universe has enough energy available
-            if random.random() <= self.reproduction_chance and universe_energy[0] > universe_energy_max/10:
+            if random_range(0, 1) <= self.reproduction_chance and universe_energy[0] > universe_energy_max/10:
                 #checks to see if the bug is big enough to give its energy to reproduce
                 if self.radius >= new_bug_energy_cost:
                     #creating new bug
-                    bugs.append(bug(pygame.Vector2(random.randrange(0 , screen.get_width()) , random.randrange(0, screen.get_height())), self.acceleration, self.attack, self.defense, self.chance_for_mutation, self.passive_eat, self.spontaneous_death_chance, self.reproduction_chance))
+                    print("Bug Repro")
+                    bugs.append(bug(pygame.Vector2(int(random_range(0, screen.get_width())) , int(random_range(0, screen.get_height()))), self.acceleration, self.attack, self.defense, self.chance_for_mutation, self.passive_eat, self.spontaneous_death_chance, self.reproduction_chance))
                     self.radius -= new_bug_energy_cost
                     self.times_split += 1
 
@@ -237,7 +242,7 @@ def run_sim():
         #ages bug to keep death ineviatable
         def age(self):
             self.time_alive += 1
-            if random.random() <= self.spontaneous_death_chance:
+            if random_range(0, 1) <= self.spontaneous_death_chance:
                 self.defense = 0
                 self.attack = 0
                 self.dead = True
@@ -275,10 +280,11 @@ def run_sim():
     # Main loop
     while running:
         #gives the chance for spontaneos life
-        if universe_energy[0] > new_bug_energy_cost:
-            if random.random() <= 0.01:
+        if universe_energy[0] > new_bug_energy_cost and len(bugs) < 500:
+            if random_range(0, 1) <= 0.01:
                 universe_energy[0] -= new_bug_energy_cost
-                bugs.append(bug(pygame.Vector2(random.randrange(0 , screen.get_width()) , random.randrange(0, screen.get_height())),speed=random.randrange(0,1000), attack=random.uniform(0,1.0), defense=random.uniform(0,1.0), mutation_chance=random.uniform(0,1.0), passive_eat=random.uniform(0,.2), spontaneous_death_chance=random.uniform(0.01,1.0), reproduction_chance=random.uniform(0,1.0)))
+                print("Random Bug created", sim_time)
+                bugs.append(bug(pygame.Vector2(int(random_range(0, screen.get_width())) , int(random_range(0, screen.get_height()))),speed=random.randrange(0,1000), attack=random.uniform(0,1.0), defense=random.uniform(0,1.0), mutation_chance=random.uniform(0,1.0), passive_eat=random.uniform(0,.2), spontaneous_death_chance=random.uniform(0.01,1.0), reproduction_chance=random.uniform(0,1.0)))
 
         if universe_energy[0] > universe_energy_max:
             universe_energy[0] = universe_energy_max
@@ -311,10 +317,10 @@ def run_sim():
                 if not b.dead:
                     live_bugs += 1
                 if update_bugs:
-                    b.update(dt, universe_energy, new_bugs)
+                    b.update(dt, universe_energy, bugs)
                     b.detectNear(screen, bugs)
                 b.draw(screen)
-                if b.radius < 1:
+                if b.radius < 1 or b.dead:
                     if b.radius < 0:
                         b.radius = 0
                     universe_energy[0] += b.radius
@@ -337,7 +343,7 @@ def run_sim():
             pygame.display.flip()
 
             # Cap FPS and get delta time
-            dt = clock.tick(120) / world_speed
+            dt = clock.tick(60) / world_speed
 
             sim_time += dt
 
