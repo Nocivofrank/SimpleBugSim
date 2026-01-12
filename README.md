@@ -46,10 +46,6 @@ The simulation evolves over time — populations rise and fall as energy fluctua
    ```
    pip install -r requirements.txt
    ```
-If you don’t have a requirements.txt yet, here’s what it should include:
-pygame
-pyqtgraph
-PyQt5
 
 ---
 
@@ -94,6 +90,7 @@ Feel free to open an issue or submit a pull request.
 
 Created by Nocivofrank
 If you like this project, give it a ⭐ on GitHub!
+
 
 
 
