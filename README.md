@@ -52,8 +52,9 @@ The simulation evolves over time — populations rise and fall as energy fluctua
 ## ▶️ Usage
 
 Run the simulation:
+```
 python main.py
-
+```
 Once launched:
 - The Pygame window shows your bugs in action.
 - The PyQtGraph window tracks key simulation stats in real time.
@@ -90,6 +91,7 @@ Feel free to open an issue or submit a pull request.
 
 Created by Nocivofrank
 If you like this project, give it a ⭐ on GitHub!
+
 
 
 
